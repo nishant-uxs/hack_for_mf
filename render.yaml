@@ -1,5 +1,19 @@
 services:
-  # Full Stack Application - Backend + Frontend + Database
+  # MongoDB Database
+  - type: pserv
+    name: civicsense-db
+    env: docker
+    plan: free
+    repo: https://github.com/render-examples/mongodb.git
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: MONGO_INITDB_ROOT_USERNAME
+        value: admin
+      - key: MONGO_INITDB_ROOT_PASSWORD
+        generateValue: true
+
+  # Full Stack Application - Backend + Frontend
   - type: web
     name: civicsense-app
     env: node
@@ -18,7 +32,7 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: MONGODB_URI
-        sync: false
+        value: mongodb://admin:${civicsense-db.MONGO_INITDB_ROOT_PASSWORD}@civicsense-db:27017/civicsense?authSource=admin
       - key: CLIENT_URL
         value: https://civicsense-app.onrender.com
       - key: ADMIN_EMAIL
