@@ -31,7 +31,7 @@ services:
       - key: MONGODB_URI
         value: mongodb://admin:${civicsense-mongodb.MONGO_INITDB_ROOT_PASSWORD}@civicsense-mongodb:27017/civicsense?authSource=admin
       - key: CLIENT_URL
-        sync: false
+        value: https://civicsense-frontend.onrender.com
       - key: ADMIN_EMAIL
         sync: false
       - key: GEMINI_API_KEY
@@ -56,3 +56,16 @@ services:
         sync: false
       - key: TWILIO_WHATSAPP_FROM
         sync: false
+
+  # Frontend React App
+  - type: web
+    name: civicsense-frontend
+    env: static
+    plan: free
+    rootDir: client
+    buildCommand: npm run build
+    publishDir: build
+    autoDeploy: true
+    envVars:
+      - key: REACT_APP_API_URL
+        value: https://civicsense-api.onrender.com
