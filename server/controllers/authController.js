@@ -9,12 +9,23 @@ const generateToken = (id) => {
 
 exports.register = async (req, res) => {
   try {
+    console.log('🔍 Registration request:', req.body);
+    
     const { name, email, password, phone } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({
         success: false,
         message: 'Please provide name, email and password'
+      });
+    }
+
+    // Check database connection
+    if (mongoose.connection.readyState !== 1) {
+      console.log('❌ Database not connected');
+      return res.status(500).json({
+        success: false,
+        message: 'Database connection error'
       });
     }
 
@@ -30,6 +41,8 @@ exports.register = async (req, res) => {
       process.env.ADMIN_EMAIL &&
       String(process.env.ADMIN_EMAIL).toLowerCase().trim() === String(email).toLowerCase().trim();
 
+    console.log('👤 Creating user:', { name, email, isAdmin: isAdminEmail });
+
     const user = await User.create({
       name,
       email,
@@ -39,6 +52,8 @@ exports.register = async (req, res) => {
     });
 
     const token = generateToken(user._id);
+
+    console.log('✅ User created successfully');
 
     res.status(201).json({
       success: true,
@@ -51,10 +66,11 @@ exports.register = async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('❌ Registration error:', error);
     res.status(500).json({
       success: false,
       message: 'Error creating user',
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Registration failed'
     });
   }
 };
