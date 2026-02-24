@@ -1,0 +1,25 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: civicsense-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - civicsense_mongo_data:/data/db
+    restart: unless-stopped
+
+  mongo-express:
+    image: mongo-express:1
+    container_name: civicsense-mongo-express
+    depends_on:
+      - mongo
+    environment:
+      ME_CONFIG_MONGODB_SERVER: mongo
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: admin
+    ports:
+      - "8081:8081"
+    restart: unless-stopped
+
+volumes:
+  civicsense_mongo_data:
