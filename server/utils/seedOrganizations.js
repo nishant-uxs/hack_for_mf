@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Organization = require('../models/Organization');
 
 async function seedOrganizationsIfEmpty() {

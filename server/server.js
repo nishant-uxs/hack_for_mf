@@ -82,12 +82,11 @@ async function connectDB() {
   try {
     const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/civicsense';
     
-    // Fixed MongoDB connection options for Render
+    // Fixed MongoDB connection options for Render (removed deprecated options)
     const options = {
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
       bufferCommands: true, // Enable buffering to prevent connection errors
-      bufferMaxEntries: 0, // Disable buffering after initial connection
     };
     
     await mongoose.connect(mongoUri, options);
