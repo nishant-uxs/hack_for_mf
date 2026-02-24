@@ -1,14 +1,17 @@
 services:
-  # Backend API Server
+  # Full Stack Application - Backend + Frontend + Database
   - type: web
-    name: civicsense-api
+    name: civicsense-app
     env: node
     plan: free
-    rootDir: server
-    buildCommand: npm install
-    startCommand: npm start
+    buildCommand: cd client && npm install && npm run build && cd ../server && npm install
+    startCommand: cd server && npm start
     autoDeploy: true
     healthCheckPath: /api/health
+    
+    # Serve static files from client build
+    staticPublishDir: client/build
+    
     envVars:
       - key: NODE_ENV
         value: production
@@ -17,21 +20,8 @@ services:
       - key: MONGODB_URI
         sync: false
       - key: CLIENT_URL
-        sync: false
+        value: https://civicsense-app.onrender.com
       - key: ADMIN_EMAIL
         sync: false
       - key: GEMINI_API_KEY
         sync: false
-
-  # Frontend React App
-  - type: web
-    name: civicsense-frontend
-    env: static
-    plan: free
-    rootDir: client
-    buildCommand: npm run build
-    publishDir: build
-    autoDeploy: true
-    envVars:
-      - key: REACT_APP_API_URL
-        value: https://civicsense-api.onrender.com

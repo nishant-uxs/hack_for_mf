@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const path = require('path');
 require('dotenv').config();
 
 const authRoutes = require('./routes/auth');
@@ -53,6 +54,16 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/org', orgRoutes);
+
+// Serve static files from React build
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../client/build')));
+  
+  // For any request that doesn't match an API route, serve React app
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../client/build/index.html'));
+  });
+}
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'CivicSense API is running' });
