@@ -1,5 +1,5 @@
 services:
-  # Full Stack Application - Backend + Frontend
+  # Full Stack Application - Backend + Frontend with SQLite
   - type: web
     name: civicsense-app
     env: node
@@ -17,11 +17,9 @@ services:
         value: production
       - key: JWT_SECRET
         generateValue: true
-      - key: MONGODB_URI
-        sync: false
       - key: CLIENT_URL
         value: https://civicsense-app.onrender.com
       - key: ADMIN_EMAIL
-        sync: false
+        value: agarwalnishant812@gmail.com
       - key: GEMINI_API_KEY
         sync: false

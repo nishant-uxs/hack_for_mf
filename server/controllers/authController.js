@@ -1,4 +1,4 @@
-const User = require('../models/User');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 const generateToken = (id) => {
@@ -20,50 +20,61 @@ exports.register = async (req, res) => {
       });
     }
 
-    // Check database connection
-    if (mongoose.connection.readyState !== 1) {
-      console.log('❌ Database not connected');
-      return res.status(500).json({
-        success: false,
-        message: 'Database connection error'
-      });
-    }
-
-    const userExists = await User.findOne({ email });
-    if (userExists) {
-      return res.status(400).json({
-        success: false,
-        message: 'User already exists with this email'
-      });
-    }
-
-    const isAdminEmail =
-      process.env.ADMIN_EMAIL &&
-      String(process.env.ADMIN_EMAIL).toLowerCase().trim() === String(email).toLowerCase().trim();
-
-    console.log('👤 Creating user:', { name, email, isAdmin: isAdminEmail });
-
-    const user = await User.create({
-      name,
-      email,
-      password,
-      phone,
-      ...(isAdminEmail ? { role: 'admin' } : {})
-    });
-
-    const token = generateToken(user._id);
-
-    console.log('✅ User created successfully');
-
-    res.status(201).json({
-      success: true,
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role
+    const db = req.app.get('db');
+    
+    // Check if user already exists
+    db.get('SELECT * FROM users WHERE email = ?', [email], (err, row) => {
+      if (err) {
+        console.error('❌ Database error:', err);
+        return res.status(500).json({
+          success: false,
+          message: 'Database error'
+        });
       }
+
+      if (row) {
+        return res.status(400).json({
+          success: false,
+          message: 'User already exists with this email'
+        });
+      }
+
+      // Check if admin email
+      const isAdminEmail = process.env.ADMIN_EMAIL &&
+        String(process.env.ADMIN_EMAIL).toLowerCase().trim() === String(email).toLowerCase().trim();
+
+      // Hash password
+      const hashedPassword = bcrypt.hashSync(password, 12);
+
+      // Create user
+      db.run(
+        'INSERT INTO users (name, email, password, phone, role) VALUES (?, ?, ?, ?, ?)',
+        [name, email, hashedPassword, phone, isAdminEmail ? 'admin' : 'user'],
+        function(err) {
+          if (err) {
+            console.error('❌ User creation error:', err);
+            return res.status(500).json({
+              success: false,
+              message: 'Error creating user'
+            });
+          }
+
+          const token = generateToken(this.lastID);
+
+          console.log('✅ User created successfully');
+
+          res.status(201).json({
+            success: true,
+            token,
+            user: {
+              id: this.lastID,
+              name,
+              email,
+              role: isAdminEmail ? 'admin' : 'user'
+            }
+          });
+        }
+      );
     });
   } catch (error) {
     console.error('❌ Registration error:', error);

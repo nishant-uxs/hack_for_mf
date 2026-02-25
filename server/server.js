@@ -1,5 +1,5 @@
 const express = require('express');
-const mongoose = require('mongoose');
+const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
@@ -16,6 +16,9 @@ const commentRoutes = require('./routes/comments');
 const leaderboardRoutes = require('./routes/leaderboard');
 const { seedOrganizationsIfEmpty } = require('./utils/seedOrganizations');
 const orgRoutes = require('./routes/org');
+
+// Make database available to routes
+app.set('db', db);
 
 const app = express();
 
@@ -78,31 +81,57 @@ app.use((err, req, res, next) => {
   });
 });
 
+// SQLite Database Setup
+const db = new sqlite3.Database('./civicsense.db');
+
+// Initialize database tables
+function initializeDatabase() {
+  // Users table
+  db.run(`CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    phone TEXT,
+    role TEXT DEFAULT 'user',
+    organization_id INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+
+  // Organizations table
+  db.run(`CREATE TABLE IF NOT EXISTS organizations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL,
+    categories TEXT,
+    contacts TEXT,
+    is_active BOOLEAN DEFAULT 1
+  )`);
+
+  // Complaints table
+  db.run(`CREATE TABLE IF NOT EXISTS complaints (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    category TEXT NOT NULL,
+    location TEXT,
+    status TEXT DEFAULT 'pending',
+    user_id INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users (id)
+  )`);
+
+  console.log('✅ SQLite database initialized');
+}
+
 async function connectDB() {
   try {
-    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/civicsense';
-    
-    // Fixed MongoDB connection options for Render (removed deprecated options)
-    const options = {
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-      bufferCommands: true, // Enable buffering to prevent connection errors
-    };
-    
-    await mongoose.connect(mongoUri, options);
-    console.log('✅ MongoDB connected');
+    initializeDatabase();
+    console.log('✅ SQLite database connected');
   } catch (err) {
-    console.error('❌ MongoDB connection failed');
+    console.error('❌ Database connection failed');
     console.error(err.message);
-    
-    // In production, don't exit immediately, allow for retries
-    if (process.env.NODE_ENV === 'production') {
-      console.log('⏱️ Retrying database connection in 5 seconds...');
-      setTimeout(connectDB, 5000);
-    } else {
-      console.error('Make sure MongoDB is running locally and MONGODB_URI is set correctly.');
-      process.exit(1);
-    }
+    process.exit(1);
   }
 }
 
@@ -111,10 +140,11 @@ async function startServer() {
   console.log('  🏛️  CivicSense Server Starting...');
   console.log('========================================\n');
 
-  // Step 1: Connect to MongoDB
+  // Step 1: Connect to SQLite Database
   await connectDB();
 
-  await seedOrganizationsIfEmpty();
+  // Seed default organizations
+  seedOrganizations();
 
   // Step 2: Start Express server
   const PORT = process.env.PORT || 5000;
@@ -122,6 +152,28 @@ async function startServer() {
     console.log('========================================');
     console.log(`  🚀 Server running on port ${PORT}`);
     console.log('========================================\n');
+  });
+}
+
+// Seed organizations
+function seedOrganizations() {
+  const organizations = [
+    { name: 'Municipal Sanitation Department', type: 'department', categories: 'garbage,drainage', contacts: '{}', is_active: 1 },
+    { name: 'Public Works Department (PWD)', type: 'department', categories: 'pothole,road_damage', contacts: '{}', is_active: 1 },
+    { name: 'Water Supply Department', type: 'department', categories: 'water_leakage', contacts: '{}', is_active: 1 },
+    { name: 'Electricity / Streetlight Department', type: 'department', categories: 'streetlight', contacts: '{}', is_active: 1 },
+    { name: 'Local Civic NGO Network', type: 'ngo', categories: 'other', contacts: '{}', is_active: 1 }
+  ];
+
+  db.get('SELECT COUNT(*) as count FROM organizations', (err, row) => {
+    if (!err && row.count === 0) {
+      const stmt = db.prepare('INSERT INTO organizations (name, type, categories, contacts, is_active) VALUES (?, ?, ?, ?, ?)');
+      organizations.forEach(org => {
+        stmt.run([org.name, org.type, org.categories, org.contacts, org.is_active]);
+      });
+      stmt.finalize();
+      console.log('✅ Organizations seeded successfully');
+    }
   });
 }
 
