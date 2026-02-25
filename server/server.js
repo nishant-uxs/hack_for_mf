@@ -11,96 +11,110 @@ const db = new sqlite3.Database('./civicsense.db');
 
 // Initialize database tables
 function initializeDatabase() {
-  // Users table
-  db.run(`CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    email TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL,
-    phone TEXT,
-    role TEXT DEFAULT 'user',
-    organization_id INTEGER,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )`);
+  return new Promise((resolve, reject) => {
+    // Users table
+    db.run(`CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      email TEXT UNIQUE NOT NULL,
+      password TEXT NOT NULL,
+      phone TEXT,
+      role TEXT DEFAULT 'user',
+      organization_id INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`, (err) => {
+      if (err) return reject(err);
+    });
 
-  // Organizations table
-  db.run(`CREATE TABLE IF NOT EXISTS organizations (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    type TEXT NOT NULL,
-    categories TEXT,
-    contacts TEXT,
-    is_active BOOLEAN DEFAULT 1
-  )`);
+    // Organizations table
+    db.run(`CREATE TABLE IF NOT EXISTS organizations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL,
+      categories TEXT,
+      contacts TEXT,
+      is_active BOOLEAN DEFAULT 1
+    )`, (err) => {
+      if (err) return reject(err);
+    });
 
-  // Complaints table
-  db.run(`CREATE TABLE IF NOT EXISTS complaints (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT NOT NULL,
-    description TEXT NOT NULL,
-    category TEXT NOT NULL,
-    city TEXT,
-    pincode TEXT,
-    location TEXT,
-    address TEXT,
-    images TEXT,
-    status TEXT DEFAULT 'pending',
-    user_id INTEGER,
-    votes INTEGER DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users (id)
-  )`);
+    // Complaints table
+    db.run(`CREATE TABLE IF NOT EXISTS complaints (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      description TEXT NOT NULL,
+      category TEXT NOT NULL,
+      city TEXT,
+      pincode TEXT,
+      location TEXT,
+      address TEXT,
+      images TEXT,
+      status TEXT DEFAULT 'pending',
+      user_id INTEGER,
+      votes INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users (id)
+    )`, (err) => {
+      if (err) return reject(err);
+    });
 
-  // Assignments table
-  db.run(`CREATE TABLE IF NOT EXISTS assignments (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    complaint_id INTEGER NOT NULL,
-    organization_id INTEGER NOT NULL,
-    channel TEXT DEFAULT 'email',
-    status TEXT DEFAULT 'queued',
-    language TEXT DEFAULT 'en',
-    tone TEXT DEFAULT 'formal',
-    attempts INTEGER DEFAULT 0,
-    last_error TEXT DEFAULT '',
-    sent_at DATETIME,
-    acknowledged_at DATETIME,
-    accepted_at DATETIME,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (complaint_id) REFERENCES complaints (id),
-    FOREIGN KEY (organization_id) REFERENCES organizations (id)
-  )`);
+    // Assignments table
+    db.run(`CREATE TABLE IF NOT EXISTS assignments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      complaint_id INTEGER NOT NULL,
+      organization_id INTEGER NOT NULL,
+      channel TEXT DEFAULT 'email',
+      status TEXT DEFAULT 'queued',
+      language TEXT DEFAULT 'en',
+      tone TEXT DEFAULT 'formal',
+      attempts INTEGER DEFAULT 0,
+      last_error TEXT DEFAULT '',
+      sent_at DATETIME,
+      acknowledged_at DATETIME,
+      accepted_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (complaint_id) REFERENCES complaints (id),
+      FOREIGN KEY (organization_id) REFERENCES organizations (id)
+    )`, (err) => {
+      if (err) return reject(err);
+    });
 
-  // Comments table
-  db.run(`CREATE TABLE IF NOT EXISTS comments (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    complaint_id INTEGER NOT NULL,
-    user_id INTEGER NOT NULL,
-    text TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (complaint_id) REFERENCES complaints (id),
-    FOREIGN KEY (user_id) REFERENCES users (id)
-  )`);
+    // Comments table
+    db.run(`CREATE TABLE IF NOT EXISTS comments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      complaint_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      text TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (complaint_id) REFERENCES complaints (id),
+      FOREIGN KEY (user_id) REFERENCES users (id)
+    )`, (err) => {
+      if (err) return reject(err);
+    });
 
-  // Notification logs table
-  db.run(`CREATE TABLE IF NOT EXISTS notification_logs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    assignment_id INTEGER NOT NULL,
-    channel TEXT DEFAULT 'email',
-    provider TEXT DEFAULT 'none',
-    recipient TEXT NOT NULL,
-    subject TEXT DEFAULT '',
-    body TEXT DEFAULT '',
-    template_id TEXT DEFAULT '',
-    template_language TEXT DEFAULT 'en',
-    template_tone TEXT DEFAULT 'formal',
-    success BOOLEAN DEFAULT 0,
-    provider_message_id TEXT DEFAULT '',
-    error TEXT DEFAULT '',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (assignment_id) REFERENCES assignments (id)
-  )`);
-
-  console.log('✅ SQLite database initialized');
+    // Notification logs table
+    db.run(`CREATE TABLE IF NOT EXISTS notification_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      assignment_id INTEGER NOT NULL,
+      channel TEXT DEFAULT 'email',
+      provider TEXT DEFAULT 'none',
+      recipient TEXT NOT NULL,
+      subject TEXT DEFAULT '',
+      body TEXT DEFAULT '',
+      template_id TEXT DEFAULT '',
+      template_language TEXT DEFAULT 'en',
+      template_tone TEXT DEFAULT 'formal',
+      success BOOLEAN DEFAULT 0,
+      provider_message_id TEXT DEFAULT '',
+      error TEXT DEFAULT '',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (assignment_id) REFERENCES assignments (id)
+    )`, (err) => {
+      if (err) return reject(err);
+      console.log('✅ SQLite database initialized');
+      resolve();
+    });
+  });
 }
 
 const authRoutes = require('./routes/auth');
@@ -180,7 +194,7 @@ app.use((err, req, res, next) => {
 
 async function connectDB() {
   try {
-    initializeDatabase();
+    await initializeDatabase();
     console.log('✅ SQLite database connected');
   } catch (err) {
     console.error('❌ Database connection failed');
