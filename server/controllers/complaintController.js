@@ -1,6 +1,5 @@
 const Complaint = require('../models/Complaint');
 const User = require('../models/User');
-const { createAssignmentsForComplaint, sendNotificationsForComplaint } = require('../utils/assignmentService');
 
 exports.createComplaint = async (req, res) => {
   try {

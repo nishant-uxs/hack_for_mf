@@ -114,11 +114,35 @@ function initializeDatabase() {
     title TEXT NOT NULL,
     description TEXT NOT NULL,
     category TEXT NOT NULL,
+    city TEXT,
+    pincode TEXT,
     location TEXT,
+    address TEXT,
+    images TEXT,
     status TEXT DEFAULT 'pending',
     user_id INTEGER,
+    votes INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users (id)
+  )`);
+
+  // Assignments table
+  db.run(`CREATE TABLE IF NOT EXISTS assignments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    complaint_id INTEGER NOT NULL,
+    organization_id INTEGER NOT NULL,
+    channel TEXT DEFAULT 'email',
+    status TEXT DEFAULT 'queued',
+    language TEXT DEFAULT 'en',
+    tone TEXT DEFAULT 'formal',
+    attempts INTEGER DEFAULT 0,
+    last_error TEXT DEFAULT '',
+    sent_at DATETIME,
+    acknowledged_at DATETIME,
+    accepted_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (complaint_id) REFERENCES complaints (id),
+    FOREIGN KEY (organization_id) REFERENCES organizations (id)
   )`);
 
   console.log('✅ SQLite database initialized');

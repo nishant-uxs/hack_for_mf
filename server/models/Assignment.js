@@ -1,71 +1,36 @@
-const mongoose = require('mongoose');
+// SQLite Assignment Model - Helper functions for database operations
+const Assignment = {
+  // Create assignment
+  create: (db, assignmentData, callback) => {
+    const { complaint, organization, channel, status, language, tone, attempts, lastError } = assignmentData;
+    
+    db.run(
+      `INSERT INTO assignments (complaint_id, organization_id, channel, status, language, tone, attempts, last_error) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [complaint, organization, channel || 'email', status || 'queued', language || 'en', tone || 'formal', attempts || 0, lastError || ''],
+      callback
+    );
+  },
 
-const assignmentSchema = new mongoose.Schema({
-  complaint: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Complaint',
-    required: true
+  // Find assignments by complaint
+  findByComplaint: (db, complaintId, callback) => {
+    db.all('SELECT * FROM assignments WHERE complaint_id = ? ORDER BY created_at DESC', [complaintId], callback);
   },
-  organization: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Organization',
-    required: true
+
+  // Find assignments by organization
+  findByOrganization: (db, organizationId, callback) => {
+    db.all('SELECT * FROM assignments WHERE organization_id = ? ORDER BY created_at DESC', [organizationId], callback);
   },
-  channel: {
-    type: String,
-    enum: ['email', 'sms', 'whatsapp'],
-    default: 'email'
+
+  // Update assignment status
+  updateStatus: (db, id, status, callback) => {
+    db.run('UPDATE assignments SET status = ? WHERE id = ?', [status, id], callback);
   },
-  status: {
-    type: String,
-    enum: [
-      'queued',
-      'sent',
-      'failed',
-      'skipped',
-      'acknowledged',
-      'accepted',
-      'in_progress',
-      'resolved'
-    ],
-    default: 'queued'
-  },
-  language: {
-    type: String,
-    enum: ['en', 'hi'],
-    default: 'en'
-  },
-  tone: {
-    type: String,
-    enum: ['formal', 'neutral'],
-    default: 'formal'
-  },
-  attempts: {
-    type: Number,
-    default: 0
-  },
-  lastError: {
-    type: String,
-    default: ''
-  },
-  sentAt: {
-    type: Date
-  },
-  acknowledgedAt: {
-    type: Date
-  },
-  acceptedAt: {
-    type: Date
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
+
+  // Find all assignments
+  findAll: (db, callback) => {
+    db.all('SELECT * FROM assignments ORDER BY created_at DESC', callback);
   }
-});
+};
 
-assignmentSchema.index({ complaint: 1 });
-assignmentSchema.index({ organization: 1 });
-assignmentSchema.index({ status: 1, createdAt: -1 });
-assignmentSchema.index({ channel: 1, status: 1, createdAt: -1 });
-
-module.exports = mongoose.model('Assignment', assignmentSchema);
+module.exports = Assignment;
