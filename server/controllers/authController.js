@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const User = require('../models/User');
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -99,7 +100,8 @@ exports.login = async (req, res) => {
 
     const db = req.app.get('db');
     
-    User.findByEmail(db, email, (err, user) => {
+    // Find user by email
+    db.get('SELECT * FROM users WHERE email = ?', [email], (err, user) => {
       if (err || !user) {
         return res.status(401).json({
           success: false,
@@ -107,7 +109,8 @@ exports.login = async (req, res) => {
         });
       }
 
-      const isPasswordCorrect = User.comparePassword(password, user.password);
+      // Compare password
+      const isPasswordCorrect = bcrypt.compareSync(password, user.password);
       if (!isPasswordCorrect) {
         return res.status(401).json({
           success: false,
@@ -141,7 +144,8 @@ exports.getMe = async (req, res) => {
   try {
     const db = req.app.get('db');
     
-    User.findById(db, req.user.id, (err, user) => {
+    // Find user by ID
+    db.get('SELECT * FROM users WHERE id = ?', [req.user.id], (err, user) => {
       if (err || !user) {
         return res.status(404).json({
           success: false,
