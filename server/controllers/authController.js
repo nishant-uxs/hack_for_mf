@@ -97,55 +97,71 @@ exports.login = async (req, res) => {
       });
     }
 
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid credentials'
-      });
-    }
-
-    const isPasswordCorrect = await user.comparePassword(password);
-    if (!isPasswordCorrect) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid credentials'
-      });
-    }
-
-    const token = generateToken(user._id);
-
-    res.status(200).json({
-      success: true,
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role
+    const db = req.app.get('db');
+    
+    User.findByEmail(db, email, (err, user) => {
+      if (err || !user) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid credentials'
+        });
       }
+
+      const isPasswordCorrect = User.comparePassword(password, user.password);
+      if (!isPasswordCorrect) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid credentials'
+        });
+      }
+
+      const token = generateToken(user.id);
+
+      res.status(200).json({
+        success: true,
+        token,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role
+        }
+      });
     });
   } catch (error) {
     res.status(500).json({
       success: false,
       message: 'Error logging in',
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Login failed'
     });
   }
 };
 
 exports.getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('-password');
-    res.status(200).json({
-      success: true,
-      user
+    const db = req.app.get('db');
+    
+    User.findById(db, req.user.id, (err, user) => {
+      if (err || !user) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found'
+        });
+      }
+
+      // Remove password from response
+      delete user.password;
+      
+      res.status(200).json({
+        success: true,
+        user
+      });
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: 'Error fetching user',
-      error: error.message
+      message: 'Error getting user profile',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Profile fetch failed'
     });
   }
 };

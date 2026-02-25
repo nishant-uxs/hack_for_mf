@@ -1,59 +1,33 @@
-const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
-const userSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true,
-    trim: true
+// SQLite User Model - Helper functions for database operations
+const User = {
+  // Find user by ID
+  findById: (db, id, callback) => {
+    db.get('SELECT * FROM users WHERE id = ?', [id], callback);
   },
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-    lowercase: true,
-    trim: true
+
+  // Find user by email
+  findByEmail: (db, email, callback) => {
+    db.get('SELECT * FROM users WHERE email = ?', [email], callback);
   },
-  password: {
-    type: String,
-    required: true,
-    minlength: 6
+
+  // Create user
+  create: (db, userData, callback) => {
+    const { name, email, password, phone, role = 'user' } = userData;
+    const hashedPassword = bcrypt.hashSync(password, 12);
+    
+    db.run(
+      'INSERT INTO users (name, email, password, phone, role) VALUES (?, ?, ?, ?, ?)',
+      [name, email, hashedPassword, phone, role],
+      callback
+    );
   },
-  phone: {
-    type: String,
-    trim: true
-  },
-  role: {
-    type: String,
-    enum: ['user', 'admin', 'org_user'],
-    default: 'user'
-  },
-  organization: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Organization'
-  },
-  complaintsReported: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Complaint'
-  }],
-  votedComplaints: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Complaint'
-  }],
-  createdAt: {
-    type: Date,
-    default: Date.now
+
+  // Compare password
+  comparePassword: (candidatePassword, hashedPassword) => {
+    return bcrypt.compare(candidatePassword, hashedPassword);
   }
-});
-
-userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next();
-  this.password = await bcrypt.hash(this.password, 12);
-  next();
-});
-
-userSchema.methods.comparePassword = async function(candidatePassword) {
-  return await bcrypt.compare(candidatePassword, this.password);
 };
 
-module.exports = mongoose.model('User', userSchema);
+module.exports = User;

@@ -17,16 +17,21 @@ exports.protect = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = await User.findById(decoded.id).select('-password');
+    const db = req.app.get('db');
+    
+    User.findById(db, decoded.id, (err, user) => {
+      if (err || !user) {
+        return res.status(401).json({
+          success: false,
+          message: 'User not found'
+        });
+      }
 
-    if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    next();
+      // Remove password from user object
+      delete user.password;
+      req.user = user;
+      next();
+    });
   } catch (error) {
     return res.status(401).json({
       success: false,
