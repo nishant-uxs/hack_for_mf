@@ -12,6 +12,17 @@ const db = new sqlite3.Database('./civicsense.db');
 // Initialize database tables
 function initializeDatabase() {
   return new Promise((resolve, reject) => {
+    let completed = 0;
+    const totalTables = 6;
+    
+    function checkComplete() {
+      completed++;
+      if (completed === totalTables) {
+        console.log('✅ SQLite database initialized');
+        resolve();
+      }
+    }
+
     // Users table
     db.run(`CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -24,6 +35,7 @@ function initializeDatabase() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`, (err) => {
       if (err) return reject(err);
+      checkComplete();
     });
 
     // Organizations table
@@ -36,6 +48,7 @@ function initializeDatabase() {
       is_active BOOLEAN DEFAULT 1
     )`, (err) => {
       if (err) return reject(err);
+      checkComplete();
     });
 
     // Complaints table (without foreign key constraints)
@@ -55,6 +68,7 @@ function initializeDatabase() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`, (err) => {
       if (err) return reject(err);
+      checkComplete();
     });
 
     // Assignments table (without foreign key constraints)
@@ -74,6 +88,7 @@ function initializeDatabase() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`, (err) => {
       if (err) return reject(err);
+      checkComplete();
     });
 
     // Comments table (without foreign key constraints)
@@ -85,6 +100,7 @@ function initializeDatabase() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`, (err) => {
       if (err) return reject(err);
+      checkComplete();
     });
 
     // Notification logs table (without foreign key constraints)
@@ -105,8 +121,7 @@ function initializeDatabase() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`, (err) => {
       if (err) return reject(err);
-      console.log('✅ SQLite database initialized');
-      resolve();
+      checkComplete();
     });
   });
 }
