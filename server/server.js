@@ -168,6 +168,16 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'OK', 
+    message: 'CivicSense API is running',
+    database: 'SQLite',
+    timestamp: new Date().toISOString()
+  });
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/complaints', complaintRoutes);
 // app.use('/api/users', userRoutes);
