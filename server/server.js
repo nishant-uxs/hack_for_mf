@@ -220,8 +220,15 @@ async function startServer() {
   // Step 1: Connect to SQLite Database
   await connectDB();
 
+  // Wait a bit for database to be ready
+  await new Promise(resolve => setTimeout(resolve, 1000));
+
   // Seed default organizations
-  seedOrganizationsIfEmpty(db);
+  try {
+    seedOrganizationsIfEmpty(db);
+  } catch (error) {
+    console.error('❌ Error seeding organizations:', error.message);
+  }
 
   // Step 2: Start Express server
   const PORT = process.env.PORT || 5000;
