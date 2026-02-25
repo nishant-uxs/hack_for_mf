@@ -2,12 +2,12 @@
 const NotificationLog = {
   // Create notification log
   create: (db, logData, callback) => {
-    const { assignment, channel, provider, to, subject, body, template, success, providerMessageId, error } = logData;
+    const { assignment, channel, provider, recipient, subject, body, template, success, providerMessageId, error } = logData;
     
     db.run(
-      `INSERT INTO notification_logs (assignment_id, channel, provider, to, subject, body, template_id, template_language, template_tone, success, provider_message_id, error) 
+      `INSERT INTO notification_logs (assignment_id, channel, provider, recipient, subject, body, template_id, template_language, template_tone, success, provider_message_id, error) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [assignment, channel || 'email', provider || 'none', to, subject || '', body || '', template?.id || '', template?.language || 'en', template?.tone || 'formal', success || false, providerMessageId || '', error || ''],
+      [assignment, channel || 'email', provider || 'none', recipient, subject || '', body || '', template?.id || '', template?.language || 'en', template?.tone || 'formal', success || false, providerMessageId || '', error || ''],
       callback
     );
   },

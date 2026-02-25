@@ -87,7 +87,7 @@ function initializeDatabase() {
     assignment_id INTEGER NOT NULL,
     channel TEXT DEFAULT 'email',
     provider TEXT DEFAULT 'none',
-    to TEXT NOT NULL,
+    recipient TEXT NOT NULL,
     subject TEXT DEFAULT '',
     body TEXT DEFAULT '',
     template_id TEXT DEFAULT '',
