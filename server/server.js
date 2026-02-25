@@ -50,13 +50,13 @@ app.use('/api/', limiter);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/complaints', complaintRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/analytics', analyticsRoutes);
-app.use('/api/ai', aiRoutes);
-app.use('/api/comments', commentRoutes);
-app.use('/api/leaderboard', leaderboardRoutes);
-app.use('/api/org', orgRoutes);
+// app.use('/api/users', userRoutes);
+// app.use('/api/admin', adminRoutes);
+// app.use('/api/analytics', analyticsRoutes);
+// app.use('/api/ai', aiRoutes);
+// app.use('/api/comments', commentRoutes);
+// app.use('/api/leaderboard', leaderboardRoutes);
+// app.use('/api/org', orgRoutes);
 
 // Serve static files from React build
 if (process.env.NODE_ENV === 'production') {
@@ -143,6 +143,36 @@ function initializeDatabase() {
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (complaint_id) REFERENCES complaints (id),
     FOREIGN KEY (organization_id) REFERENCES organizations (id)
+  )`);
+
+  // Comments table
+  db.run(`CREATE TABLE IF NOT EXISTS comments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    complaint_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    text TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (complaint_id) REFERENCES complaints (id),
+    FOREIGN KEY (user_id) REFERENCES users (id)
+  )`);
+
+  // Notification logs table
+  db.run(`CREATE TABLE IF NOT EXISTS notification_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    assignment_id INTEGER NOT NULL,
+    channel TEXT DEFAULT 'email',
+    provider TEXT DEFAULT 'none',
+    to TEXT NOT NULL,
+    subject TEXT DEFAULT '',
+    body TEXT DEFAULT '',
+    template_id TEXT DEFAULT '',
+    template_language TEXT DEFAULT 'en',
+    template_tone TEXT DEFAULT 'formal',
+    success BOOLEAN DEFAULT 0,
+    provider_message_id TEXT DEFAULT '',
+    error TEXT DEFAULT '',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (assignment_id) REFERENCES assignments (id)
   )`);
 
   console.log('✅ SQLite database initialized');

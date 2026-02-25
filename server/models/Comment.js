@@ -1,28 +1,35 @@
-const mongoose = require('mongoose');
+// SQLite Comment Model - Helper functions for database operations
+const Comment = {
+  // Create comment
+  create: (db, commentData, callback) => {
+    const { complaint, user, text } = commentData;
+    
+    db.run(
+      'INSERT INTO comments (complaint_id, user_id, text) VALUES (?, ?, ?)',
+      [complaint, user, text],
+      callback
+    );
+  },
 
-const commentSchema = new mongoose.Schema({
-  complaint: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Complaint',
-    required: true
+  // Find comments by complaint
+  findByComplaint: (db, complaintId, callback) => {
+    db.all('SELECT * FROM comments WHERE complaint_id = ? ORDER BY created_at ASC', [complaintId], callback);
   },
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+
+  // Find comment by ID
+  findById: (db, id, callback) => {
+    db.get('SELECT * FROM comments WHERE id = ?', [id], callback);
   },
-  text: {
-    type: String,
-    required: true,
-    trim: true,
-    maxlength: 1000
+
+  // Find all comments
+  findAll: (db, callback) => {
+    db.all('SELECT * FROM comments ORDER BY created_at DESC', callback);
   },
-  createdAt: {
-    type: Date,
-    default: Date.now
+
+  // Delete comment
+  delete: (db, id, callback) => {
+    db.run('DELETE FROM comments WHERE id = ?', [id], callback);
   }
-});
+};
 
-commentSchema.index({ complaint: 1, createdAt: -1 });
-
-module.exports = mongoose.model('Comment', commentSchema);
+module.exports = Comment;

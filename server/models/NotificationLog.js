@@ -1,69 +1,36 @@
-const mongoose = require('mongoose');
+// SQLite NotificationLog Model - Helper functions for database operations
+const NotificationLog = {
+  // Create notification log
+  create: (db, logData, callback) => {
+    const { assignment, channel, provider, to, subject, body, template, success, providerMessageId, error } = logData;
+    
+    db.run(
+      `INSERT INTO notification_logs (assignment_id, channel, provider, to, subject, body, template_id, template_language, template_tone, success, provider_message_id, error) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [assignment, channel || 'email', provider || 'none', to, subject || '', body || '', template?.id || '', template?.language || 'en', template?.tone || 'formal', success || false, providerMessageId || '', error || ''],
+      callback
+    );
+  },
 
-const notificationLogSchema = new mongoose.Schema({
-  assignment: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Assignment',
-    required: true
+  // Find logs by assignment
+  findByAssignment: (db, assignmentId, callback) => {
+    db.all('SELECT * FROM notification_logs WHERE assignment_id = ? ORDER BY created_at DESC', [assignmentId], callback);
   },
-  channel: {
-    type: String,
-    enum: ['email', 'sms', 'whatsapp'],
-    default: 'email'
+
+  // Find all logs
+  findAll: (db, callback) => {
+    db.all('SELECT * FROM notification_logs ORDER BY created_at DESC', callback);
   },
-  provider: {
-    type: String,
-    enum: ['smtp', 'twilio', 'none'],
-    default: 'none'
+
+  // Find successful logs
+  findSuccessful: (db, callback) => {
+    db.all('SELECT * FROM notification_logs WHERE success = 1 ORDER BY created_at DESC', callback);
   },
-  to: {
-    type: String,
-    required: true
-  },
-  subject: {
-    type: String,
-    default: ''
-  },
-  body: {
-    type: String,
-    default: ''
-  },
-  template: {
-    id: {
-      type: String,
-      default: ''
-    },
-    language: {
-      type: String,
-      enum: ['en', 'hi'],
-      default: 'en'
-    },
-    tone: {
-      type: String,
-      enum: ['formal', 'neutral'],
-      default: 'formal'
-    }
-  },
-  success: {
-    type: Boolean,
-    default: false
-  },
-  providerMessageId: {
-    type: String,
-    default: ''
-  },
-  error: {
-    type: String,
-    default: ''
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
+
+  // Find failed logs
+  findFailed: (db, callback) => {
+    db.all('SELECT * FROM notification_logs WHERE success = 0 ORDER BY created_at DESC', callback);
   }
-});
+};
 
-notificationLogSchema.index({ assignment: 1, createdAt: -1 });
-notificationLogSchema.index({ success: 1, createdAt: -1 });
-notificationLogSchema.index({ channel: 1, createdAt: -1 });
-
-module.exports = mongoose.model('NotificationLog', notificationLogSchema);
+module.exports = NotificationLog;
