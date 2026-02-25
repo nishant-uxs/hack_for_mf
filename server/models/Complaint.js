@@ -1,107 +1,42 @@
-const mongoose = require('mongoose');
+// SQLite Complaint Model - Helper functions for database operations
+const Complaint = {
+  // Create complaint
+  create: (db, complaintData, callback) => {
+    const { title, description, category, city, pincode, location, address, images, status, reporter } = complaintData;
+    
+    db.run(
+      `INSERT INTO complaints (title, description, category, city, pincode, location, address, images, status, user_id) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [title, description, category, city, pincode, location, address, JSON.stringify(images), status, reporter],
+      callback
+    );
+  },
 
-const complaintSchema = new mongoose.Schema({
-  title: {
-    type: String,
-    required: true,
-    trim: true
+  // Find all complaints
+  findAll: (db, callback) => {
+    db.all('SELECT * FROM complaints ORDER BY created_at DESC', callback);
   },
-  description: {
-    type: String,
-    required: true
+
+  // Find complaint by ID
+  findById: (db, id, callback) => {
+    db.get('SELECT * FROM complaints WHERE id = ?', [id], callback);
   },
-  category: {
-    type: String,
-    required: true,
-    enum: ['pothole', 'garbage', 'water_leakage', 'streetlight', 'drainage', 'road_damage', 'other']
+
+  // Find complaints by user
+  findByUser: (db, userId, callback) => {
+    db.all('SELECT * FROM complaints WHERE user_id = ? ORDER BY created_at DESC', [userId], callback);
   },
-  city: {
-    type: String,
-    trim: true
+
+  // Update complaint status
+  updateStatus: (db, id, status, callback) => {
+    db.run('UPDATE complaints SET status = ? WHERE id = ?', [status, id], callback);
   },
-  pincode: {
-    type: String,
-    trim: true
-  },
-  location: {
-    type: {
-      type: String,
-      enum: ['Point'],
-      default: 'Point'
-    },
-    coordinates: {
-      type: [Number],
-      required: true
-    },
-    address: {
-      type: String,
-      default: 'Unknown location'
-    }
-  },
-  images: [{
-    type: String
-  }],
-  status: {
-    type: String,
-    enum: ['Reported', 'Verified', 'InProgress', 'Resolved'],
-    default: 'Reported'
-  },
-  reporter: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  votes: {
-    type: Number,
-    default: 0
-  },
-  voters: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
-  }],
-  impactScore: {
-    type: Number,
-    default: 0
-  },
-  resolutionImages: [{
-    type: String
-  }],
-  statusHistory: [{
-    status: String,
-    timestamp: Date,
-    updatedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
-    }
-  }],
-  verifiedBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
-  },
-  verifiedAt: {
-    type: Date
-  },
-  resolvedAt: {
-    type: Date
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
+
+  // Calculate impact score
+  calculateImpactScore: (complaint) => {
+    const daysPending = Math.floor((Date.now() - new Date(complaint.created_at)) / (1000 * 60 * 60 * 24));
+    return (complaint.votes || 0) * (daysPending + 1);
   }
-});
-
-complaintSchema.index({ location: '2dsphere' });
-complaintSchema.index({ status: 1 });
-complaintSchema.index({ category: 1 });
-complaintSchema.index({ city: 1 });
-complaintSchema.index({ pincode: 1 });
-complaintSchema.index({ createdAt: -1 });
-complaintSchema.index({ impactScore: -1 });
-
-complaintSchema.methods.calculateImpactScore = function() {
-  const daysPending = Math.floor((Date.now() - this.createdAt) / (1000 * 60 * 60 * 24));
-  this.impactScore = this.votes * (daysPending + 1);
-  return this.impactScore;
 };
 
-module.exports = mongoose.model('Complaint', complaintSchema);
+module.exports = Complaint;

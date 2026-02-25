@@ -14,15 +14,7 @@ exports.createComplaint = async (req, res) => {
     }
 
     const locationData = typeof location === 'string' ? JSON.parse(location) : location;
-
-    if (!locationData || !Array.isArray(locationData.coordinates)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid location format'
-      });
-    }
-
-    locationData.address = locationData.address || address || 'Unknown location';
+    const locationString = JSON.stringify(locationData);
 
     const imagePaths = req.files ? req.files.map(file => `/uploads/complaints/${file.filename}`) : [];
 
@@ -30,147 +22,138 @@ exports.createComplaint = async (req, res) => {
       title,
       description,
       category,
-      location: locationData,
-      city: city || undefined,
-      pincode: pincode || undefined
+      city,
+      pincode,
+      location: locationString,
+      address: address || 'Unknown location',
+      images: imagePaths,
+      status: 'pending',
+      reporter: req.user.id
     };
 
-    const complaint = new Complaint({
-      ...complaintData,
-      images: imagePaths,
-      reporter: req.user.id,
-      statusHistory: [{
-        status: 'Reported',
-        timestamp: new Date(),
-        updatedBy: req.user.id
-      }]
-    });
+    const db = req.app.get('db');
+    
+    Complaint.create(db, complaintData, function(err) {
+      if (err) {
+        console.error('❌ Complaint creation error:', err);
+        return res.status(500).json({
+          success: false,
+          message: 'Error creating complaint'
+        });
+      }
 
-    await complaint.save();
-
-    await User.findByIdAndUpdate(req.user.id, {
-      $push: { complaintsReported: complaint._id }
-    });
-
-    await complaint.populate('reporter', 'name email');
-
-    setImmediate(() => {
-      createAssignmentsForComplaint(complaint)
-        .then(() => sendNotificationsForComplaint(complaint))
-        .catch(() => {});
-    });
-
-    res.status(201).json({
-      success: true,
-      message: 'Complaint registered successfully',
-      complaint
+      res.status(201).json({
+        success: true,
+        message: 'Complaint created successfully',
+        complaint: {
+          id: this.lastID,
+          title,
+          description,
+          category,
+          status: 'pending',
+          created_at: new Date().toISOString()
+        }
+      });
     });
   } catch (error) {
-    console.error('Create complaint error:', error);
+    console.error('❌ Complaint creation error:', error);
     res.status(500).json({
       success: false,
       message: 'Error creating complaint',
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Complaint creation failed'
     });
   }
 };
 
 exports.getComplaints = async (req, res) => {
   try {
-    const { 
-      status, 
-      category, 
-      city,
-      pincode,
-      search,
-      sortBy = 'createdAt', 
-      order = 'desc',
-      page = 1,
-      limit = 20
-    } = req.query;
+    const db = req.app.get('db');
+    
+    Complaint.findAll(db, (err, complaints) => {
+      if (err) {
+        console.error('❌ Error fetching complaints:', err);
+        return res.status(500).json({
+          success: false,
+          message: 'Error fetching complaints'
+        });
+      }
 
-    const query = {};
-    if (status) query.status = status;
-    if (category) query.category = category;
-    if (city) query.city = city;
-    if (pincode) query.pincode = pincode;
-    if (search && search.trim()) {
-      const searchRegex = new RegExp(search.trim(), 'i');
-      query.$or = [
-        { title: searchRegex },
-        { description: searchRegex },
-        { 'location.address': searchRegex },
-        { city: searchRegex },
-        { pincode: searchRegex },
-        { category: searchRegex }
-      ];
-    }
+      // Parse JSON fields and calculate impact scores
+      const processedComplaints = complaints.map(complaint => {
+        try {
+          const images = JSON.parse(complaint.images || '[]');
+          const location = JSON.parse(complaint.location || '{}');
+          const impactScore = Complaint.calculateImpactScore(complaint);
+          
+          return {
+            ...complaint,
+            images,
+            location,
+            impactScore
+          };
+        } catch (parseErr) {
+          console.error('Error parsing complaint data:', parseErr);
+          return complaint;
+        }
+      });
 
-    const sortOptions = {};
-    sortOptions[sortBy] = order === 'asc' ? 1 : -1;
-
-    const complaints = await Complaint.find(query)
-      .populate('reporter', 'name email')
-      .sort(sortOptions)
-      .limit(limit * 1)
-      .skip((page - 1) * limit)
-      .exec();
-
-    complaints.forEach(complaint => complaint.calculateImpactScore());
-
-    const count = await Complaint.countDocuments(query);
-
-    res.status(200).json({
-      success: true,
-      complaints,
-      totalPages: Math.ceil(count / limit),
-      currentPage: page,
-      total: count
+      res.status(200).json({
+        success: true,
+        count: processedComplaints.length,
+        complaints: processedComplaints
+      });
     });
   } catch (error) {
+    console.error('❌ Get complaints error:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching complaints',
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Failed to fetch complaints'
     });
   }
 };
 
-exports.getComplaintById = async (req, res) => {
+exports.getComplaint = async (req, res) => {
   try {
-    const complaint = await Complaint.findById(req.params.id)
-      .populate('reporter', 'name email')
-      .populate('verifiedBy', 'name email')
-      .populate('statusHistory.updatedBy', 'name email');
+    const { id } = req.params;
+    const db = req.app.get('db');
+    
+    Complaint.findById(db, id, (err, complaint) => {
+      if (err || !complaint) {
+        return res.status(404).json({
+          success: false,
+          message: 'Complaint not found'
+        });
+      }
 
-    if (!complaint) {
-      return res.status(404).json({
-        success: false,
-        message: 'Complaint not found'
+      // Parse JSON fields
+      try {
+        complaint.images = JSON.parse(complaint.images || '[]');
+        complaint.location = JSON.parse(complaint.location || '{}');
+      } catch (parseErr) {
+        console.error('Error parsing complaint data:', parseErr);
+      }
+
+      res.status(200).json({
+        success: true,
+        complaint
       });
-    }
-
-    complaint.calculateImpactScore();
-
-    res.status(200).json({
-      success: true,
-      complaint
     });
   } catch (error) {
+    console.error('❌ Get complaint error:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching complaint',
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Failed to fetch complaint'
     });
   }
 };
 
-exports.voteComplaint = async (req, res) => {
-  try {
-    const complaint = await Complaint.findById(req.params.id);
-
-    if (!complaint) {
-      return res.status(404).json({
+module.exports = {
+  createComplaint: exports.createComplaint,
+  getComplaints: exports.getComplaints,
+  getComplaint: exports.getComplaint
+};
         success: false,
         message: 'Complaint not found'
       });

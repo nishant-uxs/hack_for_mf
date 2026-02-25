@@ -1,59 +1,30 @@
-const mongoose = require('mongoose');
+// SQLite Organization Model - Helper functions for database operations
+const Organization = {
+  // Find all organizations
+  findAll: (db, callback) => {
+    db.all('SELECT * FROM organizations WHERE is_active = 1 ORDER BY name', callback);
+  },
 
-const organizationSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true,
-    trim: true
+  // Find organization by ID
+  findById: (db, id, callback) => {
+    db.get('SELECT * FROM organizations WHERE id = ?', [id], callback);
   },
-  type: {
-    type: String,
-    enum: ['department', 'ngo'],
-    default: 'department'
+
+  // Find organizations by category
+  findByCategory: (db, category, callback) => {
+    db.all('SELECT * FROM organizations WHERE is_active = 1 AND categories LIKE ? ORDER BY name', [`%${category}%`], callback);
   },
-  categories: [{
-    type: String,
-    enum: ['pothole', 'garbage', 'water_leakage', 'streetlight', 'drainage', 'road_damage', 'other']
-  }],
-  contacts: {
-    emails: [{
-      type: String,
-      trim: true,
-      lowercase: true
-    }],
-    phones: [{
-      type: String,
-      trim: true
-    }],
-    whatsappNumbers: [{
-      type: String,
-      trim: true
-    }]
-  },
-  coverage: {
-    cities: [{
-      type: String,
-      trim: true
-    }],
-    pincodes: [{
-      type: String,
-      trim: true
-    }]
-  },
-  isActive: {
-    type: Boolean,
-    default: true
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
+
+  // Create organization
+  create: (db, orgData, callback) => {
+    const { name, type, categories, contacts, isActive = true } = orgData;
+    
+    db.run(
+      'INSERT INTO organizations (name, type, categories, contacts, is_active) VALUES (?, ?, ?, ?, ?)',
+      [name, type, JSON.stringify(categories), JSON.stringify(contacts), isActive ? 1 : 0],
+      callback
+    );
   }
-});
+};
 
-organizationSchema.index({ isActive: 1 });
-organizationSchema.index({ type: 1 });
-organizationSchema.index({ categories: 1 });
-organizationSchema.index({ 'coverage.cities': 1 });
-organizationSchema.index({ 'coverage.pincodes': 1 });
-
-module.exports = mongoose.model('Organization', organizationSchema);
+module.exports = Organization;
