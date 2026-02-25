@@ -1,62 +1,63 @@
-const mongoose = require('mongoose');
 const Organization = require('../models/Organization');
 
-async function seedOrganizationsIfEmpty() {
+function seedOrganizationsIfEmpty(db) {
   try {
-    // Wait for MongoDB connection to be ready
-    if (mongoose.connection.readyState !== 1) {
-      console.log('⏳ Waiting for database connection...');
-      await new Promise(resolve => setTimeout(resolve, 2000));
-    }
-    
     const defaults = [
       {
         name: 'Municipal Sanitation Department',
         type: 'department',
-        categories: ['garbage', 'drainage'],
-        contacts: { emails: [] },
-        isActive: true
+        categories: JSON.stringify(['garbage', 'drainage']),
+        contacts: JSON.stringify({ emails: [] }),
+        is_active: 1
       },
       {
         name: 'Public Works Department (PWD)',
         type: 'department',
-        categories: ['pothole', 'road_damage'],
-        contacts: { emails: [] },
-        isActive: true
+        categories: JSON.stringify(['pothole', 'road_damage']),
+        contacts: JSON.stringify({ emails: [] }),
+        is_active: 1
       },
       {
         name: 'Water Supply Department',
         type: 'department',
-        categories: ['water_leakage'],
-        contacts: { emails: [] },
-        isActive: true
+        categories: JSON.stringify(['water_leakage']),
+        contacts: JSON.stringify({ emails: [] }),
+        is_active: 1
       },
       {
         name: 'Electricity / Streetlight Department',
         type: 'department',
-        categories: ['streetlight'],
-        contacts: { emails: [] },
-        isActive: true
+        categories: JSON.stringify(['streetlight']),
+        contacts: JSON.stringify({ emails: [] }),
+        is_active: 1
       },
       {
         name: 'Local Civic NGO Network',
         type: 'ngo',
-        categories: ['other'],
-        contacts: { emails: [] },
-        isActive: true
+        categories: JSON.stringify(['other']),
+        contacts: JSON.stringify({ emails: [] }),
+        is_active: 1
       }
     ];
 
-    const existing = await Organization.find({
-      name: { $in: defaults.map((d) => d.name) }
-    }).select('name');
+    db.get('SELECT COUNT(*) as count FROM organizations', (err, row) => {
+      if (err) {
+        console.error('❌ Error checking organizations:', err);
+        return;
+      }
 
-    const existingNames = new Set(existing.map((o) => o.name));
-    const toInsert = defaults.filter((d) => !existingNames.has(d.name));
-    if (toInsert.length === 0) return;
+      if (row.count > 0) {
+        console.log('✅ Organizations already exist');
+        return;
+      }
 
-    await Organization.insertMany(toInsert);
-    console.log('✅ Organizations seeded successfully');
+      const stmt = db.prepare('INSERT INTO organizations (name, type, categories, contacts, is_active) VALUES (?, ?, ?, ?, ?)');
+      defaults.forEach(org => {
+        stmt.run([org.name, org.type, org.categories, org.contacts, org.is_active]);
+      });
+      stmt.finalize();
+      console.log('✅ Organizations seeded successfully');
+    });
   } catch (error) {
     console.error('❌ Error seeding organizations:', error.message);
   }

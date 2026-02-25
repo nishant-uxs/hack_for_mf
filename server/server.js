@@ -198,7 +198,7 @@ async function startServer() {
   await connectDB();
 
   // Seed default organizations
-  seedOrganizations();
+  seedOrganizationsIfEmpty(db);
 
   // Step 2: Start Express server
   const PORT = process.env.PORT || 5000;
