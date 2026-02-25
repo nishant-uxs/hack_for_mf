@@ -38,7 +38,7 @@ function initializeDatabase() {
       if (err) return reject(err);
     });
 
-    // Complaints table
+    // Complaints table (without foreign key constraints)
     db.run(`CREATE TABLE IF NOT EXISTS complaints (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       title TEXT NOT NULL,
@@ -52,13 +52,12 @@ function initializeDatabase() {
       status TEXT DEFAULT 'pending',
       user_id INTEGER,
       votes INTEGER DEFAULT 0,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (user_id) REFERENCES users (id)
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`, (err) => {
       if (err) return reject(err);
     });
 
-    // Assignments table
+    // Assignments table (without foreign key constraints)
     db.run(`CREATE TABLE IF NOT EXISTS assignments (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       complaint_id INTEGER NOT NULL,
@@ -72,27 +71,23 @@ function initializeDatabase() {
       sent_at DATETIME,
       acknowledged_at DATETIME,
       accepted_at DATETIME,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (complaint_id) REFERENCES complaints (id),
-      FOREIGN KEY (organization_id) REFERENCES organizations (id)
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`, (err) => {
       if (err) return reject(err);
     });
 
-    // Comments table
+    // Comments table (without foreign key constraints)
     db.run(`CREATE TABLE IF NOT EXISTS comments (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       complaint_id INTEGER NOT NULL,
       user_id INTEGER NOT NULL,
       text TEXT NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (complaint_id) REFERENCES complaints (id),
-      FOREIGN KEY (user_id) REFERENCES users (id)
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`, (err) => {
       if (err) return reject(err);
     });
 
-    // Notification logs table
+    // Notification logs table (without foreign key constraints)
     db.run(`CREATE TABLE IF NOT EXISTS notification_logs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       assignment_id INTEGER NOT NULL,
@@ -107,8 +102,7 @@ function initializeDatabase() {
       success BOOLEAN DEFAULT 0,
       provider_message_id TEXT DEFAULT '',
       error TEXT DEFAULT '',
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (assignment_id) REFERENCES assignments (id)
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`, (err) => {
       if (err) return reject(err);
       console.log('✅ SQLite database initialized');
